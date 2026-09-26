@@ -1,0 +1,229 @@
+# MyCare CI/CD - implements the Automation Test Implementation Strategy (v1.0).
+#
+#   unit-integration ─┐
+#   api-contract ─────┼──> release-gate ──> deploy (main branch only) ──> smoke tests on the live site
+#   ui-regression x3 ─┘     (section 6)
+#
+# All checks run automatically on every push and pull request - no manual triggering (section 4).
+
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_VERSION: '8.0.x'
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  # ---------------------------------------------------------------- Tier 1
+  unit-integration:
+    name: Unit + integration tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Build solution
+        run: dotnet build MyCare.sln -c Release
+
+      - name: Run unit + integration tests (temporary, wiped database)
+        run: >
+          dotnet test tests/MyCare.UnitTests -c Release --no-build
+          --logger "trx;LogFileName=unit.trx" --results-directory TestResults
+
+      - name: Check the deployable Docker image builds
+        run: docker build -t mycare-demo:ci .
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: results-unit
+          path: TestResults/
+          if-no-files-found: warn
+
+  # ---------------------------------------------------------------- Tier 2
+  api-contract:
+    name: API / contract tests
+    runs-on: ubuntu-latest
+    env:
+      MYCARE_BASE_URL: http://localhost:5080
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Start app
+        uses: ./.github/actions/start-app
+
+      - name: Run API / contract tests
+        run: >
+          dotnet test tests/MyCare.ApiTests -c Release
+          --filter "Category!=Quarantine"
+          --logger "trx;LogFileName=api.trx" --results-directory TestResults
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: results-api
+          path: TestResults/
+          if-no-files-found: warn
+
+  # ---------------------------------------------------------------- Tier 3
+  ui-regression:
+    name: UI regression (${{ matrix.browser }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false          # let every browser finish so we see the full picture
+      matrix:
+        browser: [chromium, firefox, webkit]
+    env:
+      MYCARE_BASE_URL: http://localhost:5080
+      BROWSER: ${{ matrix.browser }}
+      PLAYWRIGHT_TRACE_DIR: ${{ github.workspace }}/TestResults/playwright-traces
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Start app
+        uses: ./.github/actions/start-app
+
+      - name: Build UI tests
+        run: dotnet build tests/MyCare.UiTests -c Release
+
+      - name: Install ${{ matrix.browser }}
+        run: pwsh tests/MyCare.UiTests/bin/Release/net8.0/playwright.ps1 install --with-deps ${{ matrix.browser }}
+
+      - name: Run UI regression
+        run: >
+          dotnet test tests/MyCare.UiTests -c Release --no-build
+          --filter "Category!=Quarantine"
+          --logger "trx;LogFileName=ui-${{ matrix.browser }}.trx" --results-directory TestResults
+
+      - name: Run quarantined UI tests (informational, never blocks)
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        run: >
+          dotnet test tests/MyCare.UiTests -c Release --no-build
+          --filter "Category=Quarantine"
+          --logger "trx;LogFileName=quarantine-ui-${{ matrix.browser }}.trx" --results-directory TestResults
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: results-ui-${{ matrix.browser }}
+          path: TestResults/
+          if-no-files-found: warn
+
+  # ---------------------------------------------------------------- Gates
+  release-gate:
+    name: Release gates
+    needs: [unit-integration, api-contract, ui-regression]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    outputs:
+      ui_passed: ${{ steps.gates.outputs.ui_passed }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: results-*
+          path: TestResults
+          merge-multiple: true
+
+      - name: Evaluate release gates
+        id: gates
+        shell: pwsh
+        run: >
+          ./scripts/Test-ReleaseGates.ps1 -ResultsDir TestResults
+          -UnitJob '${{ needs.unit-integration.result }}'
+          -ApiJob '${{ needs.api-contract.result }}'
+          -UiJob '${{ needs.ui-regression.result }}'
+
+      - name: Sync results to Jira/Xray
+        if: ${{ !cancelled() && github.event_name == 'push' }}
+        shell: pwsh
+        env:
+          XRAY_CLIENT_ID: ${{ secrets.XRAY_CLIENT_ID }}
+          XRAY_CLIENT_SECRET: ${{ secrets.XRAY_CLIENT_SECRET }}
+          XRAY_PROJECT_KEY: ${{ vars.XRAY_PROJECT_KEY }}
+        run: ./scripts/Sync-XrayResults.ps1 -ResultsDir TestResults
+
+  # ---------------------------------------------------------------- Deploy
+  deploy:
+    name: Deploy to Render
+    needs: release-gate
+    if: ${{ !cancelled() && needs.release-gate.result == 'success' && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    # All UI tests passed -> "production" deploys straight away.
+    # Some UI tests failed -> "production-pm-approval" waits for the project manager to approve (section 6).
+    environment:
+      name: ${{ needs.release-gate.outputs.ui_passed == 'true' && 'production' || 'production-pm-approval' }}
+      url: ${{ vars.RENDER_APP_URL }}
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Trigger Render deploy
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$RENDER_DEPLOY_HOOK_URL" ]; then
+            echo "::error::The RENDER_DEPLOY_HOOK_URL secret is not set (see README, step 4)."; exit 1
+          fi
+          curl -fsS -X POST "$RENDER_DEPLOY_HOOK_URL" > /dev/null
+          echo "Render deploy requested for commit $GITHUB_SHA"
+
+      - name: Wait for the new version to go live
+        env:
+          APP_URL: ${{ vars.RENDER_APP_URL }}
+        run: |
+          APP_URL="${APP_URL%/}"
+          if [ -z "$APP_URL" ]; then
+            echo "::error::The RENDER_APP_URL variable is not set (see README, step 4)."; exit 1
+          fi
+          for i in $(seq 1 60); do
+            version=$(curl -fsS --max-time 20 "$APP_URL/api/health" | jq -r .version 2>/dev/null || true)
+            if [ "$version" = "$GITHUB_SHA" ]; then
+              echo "Version $version is live at $APP_URL"; exit 0
+            fi
+            echo "Waiting for deploy... (live version: ${version:-not reachable yet})"
+            sleep 15
+          done
+          echo "::error::The new version did not go live within 15 minutes. Check the Render dashboard logs."
+          exit 1
+
+      - name: Smoke tests against the live site
+        env:
+          MYCARE_BASE_URL: ${{ vars.RENDER_APP_URL }}
+        run: >
+          dotnet test tests/MyCare.ApiTests -c Release
+          --filter "Category=Smoke"
+          --logger "trx;LogFileName=smoke.trx" --results-directory TestResults
