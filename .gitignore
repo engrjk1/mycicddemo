@@ -1,0 +1,18 @@
+# Build output
+bin/
+obj/
+
+# Test output
+TestResults/
+playwright-traces/
+
+# Local databases
+*.db
+*.db-shm
+*.db-wal
+
+# IDE files
+.vs/
+.vscode/
+.idea/
+*.user

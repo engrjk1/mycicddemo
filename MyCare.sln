@@ -1,0 +1,46 @@
+
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MyCare.Web", "src\MyCare.Web\MyCare.Web.csproj", "{6D1A3E2B-4C5F-4A7B-9E1D-2F3A4B5C6D01}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MyCare.UnitTests", "tests\MyCare.UnitTests\MyCare.UnitTests.csproj", "{6D1A3E2B-4C5F-4A7B-9E1D-2F3A4B5C6D02}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MyCare.TestSupport", "tests\MyCare.TestSupport\MyCare.TestSupport.csproj", "{6D1A3E2B-4C5F-4A7B-9E1D-2F3A4B5C6D03}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MyCare.ApiTests", "tests\MyCare.ApiTests\MyCare.ApiTests.csproj", "{6D1A3E2B-4C5F-4A7B-9E1D-2F3A4B5C6D04}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MyCare.UiTests", "tests\MyCare.UiTests\MyCare.UiTests.csproj", "{6D1A3E2B-4C5F-4A7B-9E1D-2F3A4B5C6D05}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{6D1A3E2B-4C5F-4A7B-9E1D-2F3A4B5C6D01}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6D1A3E2B-4C5F-4A7B-9E1D-2F3A4B5C6D01}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6D1A3E2B-4C5F-4A7B-9E1D-2F3A4B5C6D01}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6D1A3E2B-4C5F-4A7B-9E1D-2F3A4B5C6D01}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6D1A3E2B-4C5F-4A7B-9E1D-2F3A4B5C6D02}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6D1A3E2B-4C5F-4A7B-9E1D-2F3A4B5C6D02}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6D1A3E2B-4C5F-4A7B-9E1D-2F3A4B5C6D02}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6D1A3E2B-4C5F-4A7B-9E1D-2F3A4B5C6D02}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6D1A3E2B-4C5F-4A7B-9E1D-2F3A4B5C6D03}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6D1A3E2B-4C5F-4A7B-9E1D-2F3A4B5C6D03}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6D1A3E2B-4C5F-4A7B-9E1D-2F3A4B5C6D03}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6D1A3E2B-4C5F-4A7B-9E1D-2F3A4B5C6D03}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6D1A3E2B-4C5F-4A7B-9E1D-2F3A4B5C6D04}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6D1A3E2B-4C5F-4A7B-9E1D-2F3A4B5C6D04}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6D1A3E2B-4C5F-4A7B-9E1D-2F3A4B5C6D04}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6D1A3E2B-4C5F-4A7B-9E1D-2F3A4B5C6D04}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6D1A3E2B-4C5F-4A7B-9E1D-2F3A4B5C6D05}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6D1A3E2B-4C5F-4A7B-9E1D-2F3A4B5C6D05}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6D1A3E2B-4C5F-4A7B-9E1D-2F3A4B5C6D05}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6D1A3E2B-4C5F-4A7B-9E1D-2F3A4B5C6D05}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
