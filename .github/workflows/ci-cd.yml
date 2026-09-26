@@ -31,7 +31,7 @@ jobs:
   # ---------------------------------------------------------------- Tier 1
   unit-integration:
     name: Unit + integration tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 
@@ -60,7 +60,7 @@ jobs:
   # ---------------------------------------------------------------- Tier 2
   api-contract:
     name: API / contract tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       MYCARE_BASE_URL: http://localhost:5080
     steps:
@@ -89,7 +89,7 @@ jobs:
   # ---------------------------------------------------------------- Tier 3
   ui-regression:
     name: UI regression (${{ matrix.browser }})
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false          # let every browser finish so we see the full picture
       matrix:
@@ -140,7 +140,7 @@ jobs:
     name: Release gates
     needs: [unit-integration, api-contract, ui-regression]
     if: ${{ !cancelled() }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       ui_passed: ${{ steps.gates.outputs.ui_passed }}
     steps:
@@ -175,7 +175,7 @@ jobs:
     name: Deploy to Render
     needs: release-gate
     if: ${{ !cancelled() && needs.release-gate.result == 'success' && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # All UI tests passed -> "production" deploys straight away.
     # Some UI tests failed -> "production-pm-approval" waits for the project manager to approve (section 6).
     environment:
