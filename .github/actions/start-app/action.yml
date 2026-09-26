@@ -1,0 +1,34 @@
+name: Start MyCare app
+description: Publishes the web app and starts it in the background with a fresh, temporary database.
+
+inputs:
+  port:
+    description: Port the app listens on
+    default: '5080'
+
+runs:
+  using: composite
+  steps:
+    - name: Publish app
+      shell: bash
+      run: dotnet publish src/MyCare.Web -c Release -o "$RUNNER_TEMP/app"
+
+    - name: Start app in background
+      shell: bash
+      run: |
+        cd "$RUNNER_TEMP/app"
+        export ConnectionStrings__Default="Data Source=$RUNNER_TEMP/ci-test.db"
+        nohup dotnet MyCare.Web.dll --urls "http://localhost:${{ inputs.port }}" > "$RUNNER_TEMP/app.log" 2>&1 &
+
+    - name: Wait until the app is healthy
+      shell: bash
+      run: |
+        for i in $(seq 1 30); do
+          if curl -fsS "http://localhost:${{ inputs.port }}/api/health"; then
+            echo; echo "App is up on port ${{ inputs.port }}"; exit 0
+          fi
+          sleep 2
+        done
+        echo "::error::The app did not start within 60 seconds"
+        cat "$RUNNER_TEMP/app.log"
+        exit 1
