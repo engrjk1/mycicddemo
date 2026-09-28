@@ -1,4 +1,4 @@
-# MyCare Appointments: Test Automation Demo
+# MyCare Appointments: Test Automation Demo updated
 
 A small demo web app that puts the **Automation Test Implementation Strategy (v1.0)** into practice:
 three layers of automated tests, requirement traceability, release gates, and automatic deployment with GitHub Actions.
